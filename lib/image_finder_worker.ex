@@ -10,23 +10,20 @@ defmodule ImageFinder.Worker do
   end
 
   def handle_call({:fetch, source_file, target_directory}, _from, state) do
-    content = File.read! source_file
     regexp = ~r/http(s?)\:.*?\.(png|jpg|gif)/
-    Regex.scan(regexp, content)
+    source_file
+      |> File.stream!()
+      |> Stream.map(&(Regex.scan(regexp, &1)))
+      # |> Enum.map(&List.first/1)
       |> Enum.map(&List.first/1)
-      |> Enum.map(&(fetch_link &1, target_directory))
+      |> Enum.map(&(start_download(&1, target_directory)))
+
     {:reply, :ok, state}
   end
 
-  def fetch_link(link, target_directory) do
-    HTTPotion.get(link).body  |> save(target_directory)
+  def start_download(link, target_directory) do
+    ImageFinder.DymanicSupervisor.start_child({link, target_directory})
+    # GenServer.cast(pid, {:fetch_link, link, target_directory})
   end
 
-  def digest(body) do
-    :crypto.hash(:md5 , body) |> Base.encode16()
-  end
-
-  def save(body, directory) do
-    File.write! "#{directory}/#{digest(body)}", body
-  end
 end

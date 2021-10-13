@@ -6,8 +6,11 @@ defmodule ImageFinder.Supervisor do
   end
 
   def init(:ok) do
-    children = [worker(ImageFinder.Worker, [ImageFinder.Worker])]
+    children = [
+      {ImageFinder.Worker, ImageFinder.Worker},
+      {ImageFinder.DymanicSupervisor, ImageFinder.DymanicSupervisor}
+    ]
 
-    supervise(children, strategy: :one_for_one)
+    Supervisor.init(children, strategy: :one_for_one)
   end
 end
